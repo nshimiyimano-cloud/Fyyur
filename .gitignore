@@ -1,3 +1,5 @@
 /.github
 /LICENSE.txt
 /requirements.txt
+/error.log
+/fabfile.py
