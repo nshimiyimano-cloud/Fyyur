@@ -45,7 +45,7 @@ class Venue(db.Model):
     website=db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean,default=False)
+    seeking_talent=db.Column(db.Boolean,default=False,server_default="false")
     seeking_description =db.Column(db.String(255))
     Shows=db.relationship('Shows',backref = 'Venue',cascade ='all,delete-orphan',lazy = 'dynamic')
 
@@ -213,7 +213,6 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-
   artist=Artist.query.get_or_404(artist_id)
   if request.method == 'POST':
     artist.name=request.form['name']
@@ -226,7 +225,7 @@ def edit_artist_submission(artist_id):
     artist.seeking_venue=request.form['seeking_venue']
     artist.seeking_description=request.form['seeking_description']
     db.session.commit()
-    return redirect('/artist')
+    return redirect('/artists')
   else:
          #return render_template('pages/show_artist.html', artist=artist)
     return redirect(url_for('show_artist', artist_id=artist_id))
@@ -237,11 +236,10 @@ def edit_artist_submission(artist_id):
 def edit_venue(venue_id):
   form = VenueForm()
   venue=Venue.query.get_or_404(venue_id)
-
-
  
   # TODO: populate form with values from venue with ID <venue_id>
   return render_template('forms/edit_venue.html', form=form, venue=venue)
+
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
@@ -258,7 +256,7 @@ def edit_venue_submission(venue_id):
     venue.seeking_talent=request.form['seeking_talent']
     venue.seeking_description=request.form['seeking_description']
     db.session.commit()
-    return redirect('/artist')
+    return redirect('/artists')
   else: 
     return redirect(url_for('show_venue', venue_id=venue))
 
@@ -308,6 +306,7 @@ def create_shows():
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
+  
   artist_id=request.form['artist_id']
   venue_id=request.form['venue_id']  
   start_time=request.form['start_time']
