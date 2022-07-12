@@ -129,15 +129,16 @@ def search_venues():
 
 
 @app.route('/venues/<int:venue_id>')
-def show_venue(venue_id):
-   
+def show_venue(venue_id):   
   data=Venue.query.get_or_404(venue_id) 
   return render_template('pages/show_venue.html', venue=data)
 
+
+
+@app.route('/venues/create', methods=['GET'])
 def create_venue_form():
   form = VenueForm()
   return render_template('forms/new_venue.html', form=form)
-
 
 
 @app.route('/venues/create', methods=['POST'])
@@ -151,7 +152,7 @@ def create_venue_submission():
   facebook_link=request.form['facebook_link']
   image_link=request.form['image_link']
   website_link=request.form['website_link']
-  seeking_talent=request.form['seeking_talent']
+  seeking_talent=request.form['seeking_talent'] == "y" 
   seeking_description=request.form['seeking_description']
   n_venue=Venue(name=name,city=city, state=state,address=address, phone=phone, genres=genres, facebook_link=facebook_link ,image_link=image_link,website=website_link,seeking_talent=seeking_talent,seeking_description=seeking_description)
   db.session.add(n_venue)
@@ -165,15 +166,19 @@ def create_venue_submission():
   return render_template('pages/home.html')
 
 
+#block to delete venues
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
-def delete_venue(venue_id):
+@app.route('/venues/delete/<venue_id>')
+def delete_venue(venue_id):  
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
-
-  # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
-  # clicking that button delete it from the db then redirect the user to the homepage
-  return None
+  venue=Venue.query.get_or_404(venue_id)  
+  db.session.delete(venue)
+  db.session.commit()
+  flash('Venue Data  was successfully Deleted!')
+  return redirect('/venues')
+  
+ 
 
 
 @app.route('/artists')
@@ -225,11 +230,28 @@ def edit_artist_submission(artist_id):
     artist.seeking_venue=request.form['seeking_venue']
     artist.seeking_description=request.form['seeking_description']
     db.session.commit()
+
+    flash('Artist Data ' + artist.name + ' was successfully Updated!')
     return redirect('/artists')
-  else:
-         #return render_template('pages/show_artist.html', artist=artist)
+  else:        
     return redirect(url_for('show_artist', artist_id=artist_id))
 
+
+# block to delete artists
+
+@app.route('/artists/delete/<artist_id>')
+def delete_artist(artist_id):
+  # TODO: Complete this endpoint for taking a artist_id, and using
+  # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
+  artist=Artist.query.get_or_404(artist_id)  
+  db.session.delete(artist) 
+  db.session.commit()
+  flash('Artist Data  was successfully Deleted!')
+  return redirect('/artists')
+  
+  # else:
+    #flash('Artist Data  was failed to be Deleted!')
+    #return redirect(url_for('show_artist', artist_id=artist_id)) 
 
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
@@ -253,11 +275,14 @@ def edit_venue_submission(venue_id):
     venue.genres=request.form['genres']
     venue.facebook_link=request.form['facebook_link']
     venue.image_link=request.form['image_link']
-    venue.seeking_talent=request.form['seeking_talent']
+    venue.seeking_talent=request.form['seeking_talent'] == "y"
     venue.seeking_description=request.form['seeking_description']
-    db.session.commit()
-    return redirect('/artists')
+    if db.session.commit():
+      flash(venue.name + ' was successfully Updated!')
+      return redirect('/venues')
+    
   else: 
+    flash('Venue Data ' + request.form['name'] + ' was failed to be Updated!')
     return redirect(url_for('show_venue', venue_id=venue))
 
 #  Create Artist
@@ -285,18 +310,18 @@ def create_artist_submission():
   db.session.commit()
   
   # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
+  flash('Artist Data   was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
   return render_template('pages/home.html')
 
 
+#to display shows data
+
 @app.route('/shows')
 def shows():
   data=db.session.query(Shows,Artist,Venue).join(Artist,Shows.artist_id == Artist.id).join(Venue,Shows.venue_id == Venue.id).all()
-  print(data)
-  for result in data:
-    print('Name: {} artist id: {} '.format(result[0].venue_id,result[0].artist_id));      
+      
   return render_template('pages/shows.html', shows=data)
 
 @app.route('/shows/create')

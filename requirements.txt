@@ -3,3 +3,5 @@ python-dateutil==2.6.0
 flask-moment==0.11.0
 flask-wtf==0.14.3
 flask_sqlalchemy==2.4.4
+https://www.facebook.com/photo/?fbid=101065468925179&set=a.101065495591843 lydumuh
+https://www.youtube.com/watch?v=k4h9TLqv5wc to implement function logic using RoM 
