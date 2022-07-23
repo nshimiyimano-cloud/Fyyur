@@ -2,91 +2,35 @@
 # Imports
 #----------------------------------------------------------------------------#
 
-import json
-
-from sqlalchemy import Column, Integer, String
+from flask import Flask,flash , request,render_template,redirect,url_for
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from config import SQLALCHEMY_TRACK_MODIFICATIONS
 from flask_moment import Moment
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import FlaskForm
 
-from forms import *
 
-#----------------------------------------------------------------------------#
-# App Config.
-#----------------------------------------------------------------------------#
+# to import all models created in model.py
 
-app = Flask(__name__)
+from  model import FyyurSession,migrate, config, db, Venue, Artist, Shows
+
+from forms import ArtistForm, VenueForm, ShowForm
+
+def create_app() -> Flask:
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = config["SQLALCHEMY_DATABASE_URI"]
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config["SQLALCHEMY_TRACK_MODIFICATIONS"]
+    app.config['SECRET_KEY'] = config['SECRET_KEY']
+    db.init_app(app)
+    migrate = Migrate(app, db)
+    return app
+
+app= create_app()
 moment = Moment(app)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-db.create_all()
-migrate = Migrate(app, db)
-# TODO: connect to a local postgresql database
 
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    genres = db.Column(db.String(300))
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    seeking_talent = db.Column(
-        db.Boolean, default=False, server_default="false")
-    seeking_description = db.Column(db.String(255))
-    Shows = db.relationship('Shows', backref='Venue',
-                            cascade='all,delete-orphan', lazy='dynamic')
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-venue=Venue
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website_link = db.Column(db.String(200))
-    seeking_venue = db.Column(db.String(200))
-    seeking_description = db.Column(db.String(255))
-    Shows = db.relationship('Shows', backref='Artist',
-                            cascade='all,delete-orphan', lazy='dynamic')
-
-artist =Artist
-class Shows(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
-    #venue_name =db.Column(db.String)
-    artist_id = db.Column(db.Integer, db.ForeignKey(
-        'Artist.id'), nullable=False)
-   # artist_name =db.Column(db.String)
-    #artist_image_link=db.Column(db.String(255),nullable= False)
-    #start_time=db.Column(db.Date, default=datetime.utcnow)
-    start_time = db.Column(db.DateTime, nullable=False)
-
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -137,6 +81,7 @@ def search_venues():
         "count": count,
         "data": fetchedData
     }
+    
     return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
 
@@ -180,8 +125,9 @@ def create_venue_submission():
       seeking_talent=form.seeking_talent.data,
       seeking_description=form.seeking_description.data
       )
-    db.session.add(venue)
-    db.session.commit()
+    FyyurSession.add(venue)
+    FyyurSession.commit()
+     
 
         # flash success when venue successfully submitted or inserted
 
@@ -192,7 +138,7 @@ def create_venue_submission():
   except Exception as err:
     flash('An error occur creating the Venue: {0}. Error: {1} '.format(
     venue.name, err))
-    db.session.rollback()
+    FyyurSession.rollback()
     return render_template('pages/home.html')
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   
@@ -204,8 +150,8 @@ def delete_venue(venue_id):
     # TODO: Complete this endpoint for taking a venue_id, and using
     # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
     venue = Venue.query.get_or_404(venue_id)
-    db.session.delete(venue)
-    db.session.commit()
+    FyyurSession.delete(venue)
+    FyyurSession.commit()
     flash('Venue Data  was successfully Deleted!')
     return redirect('/venues')
 
@@ -270,7 +216,7 @@ def edit_artist_submission(artist_id):
         artist.image_link = request.form['image_link']
         artist.seeking_venue = request.form['seeking_venue']
         artist.seeking_description = request.form['seeking_description']
-        db.session.commit()
+        FyyurSession.commit()
 
         flash('Artist Data ' + artist.name + ' was successfully Updated!')
         return redirect('/artists')
@@ -285,15 +231,12 @@ def delete_artist(artist_id):
     # TODO: Complete this endpoint for taking a artist_id, and using
     # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
     artist = Artist.query.get_or_404(artist_id)
-    db.session.delete(artist)
-    db.session.commit()
+    FyyurSession.delete(artist)
+    FyyurSession.commit()
     flash('Artist Data  was successfully Deleted!')
     return redirect('/artists')
 
-    # else:
-    #flash('Artist Data  was failed to be Deleted!')
-    # return redirect(url_for('show_artist', artist_id=artist_id))
-
+   
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
@@ -322,7 +265,7 @@ def edit_venue_submission(venue_id):
         venue.image_link = form.image_link.data
         venue.seeking_talent = form.seeking_talent.data
         venue.seeking_description = form.seeking_description.data
-        db.session.commit()
+        FyyurSession.commit()
 
         # flash success when Venue successfully updated or modified
 
@@ -333,7 +276,7 @@ def edit_venue_submission(venue_id):
       except Exception as err:
         flash('An error occur updating the Venue {0}. Error: {1} '.format(
         venue.name, err))
-        db.session.rollback()
+        FyyurSession.rollback()
         return redirect(url_for('show_venue', venue_id=venue))
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
       
@@ -366,8 +309,8 @@ def create_artist_submission():
       seeking_venue = form.seeking_venue.data,
       seeking_description = form.seeking_description.data
       )
-    db.session.add(artist)
-    db.session.commit()
+    FyyurSession.add(artist)
+    FyyurSession.commit(artist)
 
         # flash success when Artist successfully submitted or inserted
 
@@ -378,7 +321,7 @@ def create_artist_submission():
   except Exception as err:
     flash('An error occur creating the Artist: {0}. Error: {1} '.format(
     artist.name, err))
-    db.session.rollback()
+    FyyurSession.rollback()
     return render_template('pages/home.html')
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   
@@ -391,6 +334,7 @@ def create_artist_submission():
 def shows():
     data = db.session.query(Shows, Artist, Venue).join(
         Artist, Shows.artist_id == Artist.id).join(Venue, Shows.venue_id == Venue.id).all()
+    
 
     return render_template('pages/shows.html', shows=data)
 
@@ -409,8 +353,8 @@ def create_show_submission():
     start_time = request.form['start_time']
     n_post = Shows(artist_id=artist_id, venue_id=venue_id,
                    start_time=start_time)
-    db.session.add(n_post)
-    db.session.commit()
+    FyyurSession.add(n_post)
+    FyyurSession.commit()
 
     flash('Show was successfully listed!')
 
